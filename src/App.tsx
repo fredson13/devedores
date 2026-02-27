@@ -6,7 +6,6 @@ import {
   TrendingUp, 
   ArrowUpRight, 
   ArrowDownLeft, 
-  MessageSquare, 
   Trash2, 
   ChevronRight,
   UserPlus,
@@ -35,8 +34,6 @@ import {
 import { format, parseISO, isValid, startOfWeek, endOfWeek, isWithinInterval } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Customer, Transaction } from './types';
-import { generateCollectionMessage } from './services/geminiService';
-import ReactMarkdown from 'react-markdown';
 
 export default function App() {
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -46,8 +43,6 @@ export default function App() {
   const [isAddingTransaction, setIsAddingTransaction] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
-  const [aiMessage, setAiMessage] = useState<string | null>(null);
-  const [isGeneratingAi, setIsGeneratingAi] = useState(false);
   const [activeTab, setActiveTab] = useState<'dashboard' | 'customers' | 'reports'>('dashboard');
   const [allTransactions, setAllTransactions] = useState<(Transaction & { customer_name?: string, closure_id?: number | null })[]>([]);
   const [closures, setClosures] = useState<any[]>([]);
@@ -199,24 +194,6 @@ export default function App() {
       if (selectedCustomerId === id) setSelectedCustomerId(null);
     } catch (err) {
       console.error(err);
-    }
-  };
-
-  const handleGenerateAiMessage = async () => {
-    if (!selectedCustomer) return;
-    setIsGeneratingAi(true);
-    setAiMessage(null);
-    try {
-      const msg = await generateCollectionMessage(
-        selectedCustomer.name, 
-        selectedCustomer.total_debt, 
-        transactions.filter(t => t.amount > 0)
-      );
-      setAiMessage(msg || "Erro ao gerar mensagem.");
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setIsGeneratingAi(false);
     }
   };
 
@@ -449,14 +426,6 @@ export default function App() {
               </div>
               <div className="flex gap-3">
                 <button 
-                  onClick={handleGenerateAiMessage}
-                  disabled={isGeneratingAi || selectedCustomer.total_debt <= 0}
-                  className="flex items-center gap-2 px-4 py-2 bg-emerald-100 text-emerald-700 rounded-xl hover:bg-emerald-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <MessageSquare size={18} />
-                  {isGeneratingAi ? 'Gerando...' : 'Cobrança IA'}
-                </button>
-                <button 
                   onClick={() => setIsAddingTransaction(true)}
                   className="flex items-center gap-2 px-4 py-2 bg-zinc-900 text-white rounded-xl hover:bg-zinc-800 transition-colors"
                 >
@@ -493,44 +462,6 @@ export default function App() {
                 </h3>
               </div>
             </div>
-
-            {/* AI Message Preview */}
-            <AnimatePresence>
-              {aiMessage && (
-                <motion.div 
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: 20 }}
-                  className="bg-emerald-900 text-white p-6 rounded-3xl relative overflow-hidden"
-                >
-                  <div className="relative z-10">
-                    <div className="flex items-center justify-between mb-4">
-                      <h4 className="font-bold flex items-center gap-2">
-                        <MessageSquare size={18} />
-                        Sugestão de Cobrança Inteligente
-                      </h4>
-                      <button onClick={() => setAiMessage(null)} className="p-1 hover:bg-white/10 rounded-full">
-                        <X size={18} />
-                      </button>
-                    </div>
-                    <div className="bg-white/10 p-4 rounded-2xl mb-4 text-emerald-50">
-                      <ReactMarkdown>{aiMessage}</ReactMarkdown>
-                    </div>
-                    <button 
-                      onClick={() => {
-                        const text = encodeURIComponent(aiMessage);
-                        window.open(`https://wa.me/${selectedCustomer.phone.replace(/\D/g, '')}?text=${text}`, '_blank');
-                      }}
-                      className="flex items-center gap-2 px-6 py-3 bg-emerald-500 text-white rounded-xl font-bold hover:bg-emerald-400 transition-all shadow-lg shadow-emerald-900/20"
-                    >
-                      <Send size={18} />
-                      Enviar via WhatsApp
-                    </button>
-                  </div>
-                  <div className="absolute -right-10 -bottom-10 w-40 h-40 bg-emerald-800 rounded-full blur-3xl opacity-50"></div>
-                </motion.div>
-              )}
-            </AnimatePresence>
 
             {/* Transaction History */}
             <div className="bg-white rounded-3xl border border-zinc-200 shadow-sm overflow-hidden">
@@ -661,15 +592,6 @@ export default function App() {
                     </div>
                     <span className="text-sm font-semibold text-zinc-900">Relatórios</span>
                   </button>
-                </div>
-                <div className="p-6 bg-emerald-50 rounded-2xl border border-emerald-100">
-                  <p className="text-emerald-800 font-bold mb-1 flex items-center gap-2">
-                    <MessageSquare size={16} />
-                    Dica da IA
-                  </p>
-                  <p className="text-sm text-emerald-700">
-                    Você tem {customers.filter(c => c.total_debt > 100).length} clientes com dívidas acima de R$ 100. Que tal enviar um lembrete hoje?
-                  </p>
                 </div>
               </div>
             </div>
